@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Knowledge Representation in Robotics - Interactive Simulator</title>
+  <style>
+    :root {
+      --bg-dark: #0f172a;
+      --panel-bg: rgba(30, 41, 59, 0.7);
+      --border-color: rgba(255, 255, 255, 0.1);
+      --primary-cyan: #06b6d4;
+      --primary-glow: rgba(6, 182, 212, 0.3);
+      --accent-purple: #a855f7;
+      --accent-green: #10b981;
+      --accent-red: #ef4444;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+      background-image: 
+        radial-gradient(circle at 15% 15%, rgba(6, 182, 212, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 85% 85%, rgba(168, 85, 247, 0.08) 0%, transparent 40%);
+    }
+
+    header {
+      background: var(--panel-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 20px 30px;
+      margin-bottom: 20px;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    .header-title h1 {
+      font-size: 1.5rem;
+      letter-spacing: 0.5px;
+      background: linear-gradient(90deg, #06b6d4, #a855f7);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 5px;
+    }
+
+    .header-title p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .student-meta {
+      display: flex;
+      gap: 20px;
+      font-size: 0.85rem;
+      background: rgba(15, 23, 42, 0.6);
+      padding: 10px 18px;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+    }
+
+    .student-meta div span {
+      color: var(--primary-cyan);
+      font-weight: 600;
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 320px 1fr 380px;
+      gap: 20px;
+      flex: 1;
+    }
+
+    @media (max-width: 1200px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel {
+      background: var(--panel-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+    }
+
+    .panel-title {
+      font-size: 1rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--primary-cyan);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 10px;
+    }
+
+    /* Controls Panel */
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    select, button {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      outline: none;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    select:focus, button:hover {
+      border-color: var(--primary-cyan);
+      box-shadow: 0 0 12px var(--primary-glow);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary-cyan), #0284c7);
+      color: #fff;
+      font-weight: 600;
+      border: none;
+      margin-top: 10px;
+    }
+
+    .btn-primary:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
+    .toggle-container {
+      display: flex;
+      background: rgba(15, 23, 42, 0.8);
+      border-radius: 8px;
+      padding: 4px;
+      border: 1px solid var(--border-color);
+    }
+
+    .toggle-btn {
+      flex: 1;
+      padding: 8px;
+      font-size: 0.8rem;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--text-muted);
+    }
+
+    .toggle-btn.active {
+      background: var(--primary-cyan);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    /* Visualization Panel */
+    .viewport {
+      background: rgba(15, 23, 42, 0.9);
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      height: 280px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+    }
+
+    .environment-zone {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .zone-box {
+      width: 70px;
+      height: 70px;
+      border: 2px dashed var(--border-color);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .robot-avatar {
+      width: 48px;
+      height: 48px;
+      background: linear-gradient(135deg, var(--accent-purple), var(--primary-cyan));
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: absolute;
+      top: 50%;
+      left: 10%;
+      transform: translateY(-50%);
+      transition: all 1s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 0 15px rgba(168, 85, 247, 0.5);
+      z-index: 10;
+    }
+
+    .object-icon {
+      font-size: 1.8rem;
+      transition: all 0.3s ease;
+    }
+
+    .status-banner {
+      padding: 10px 15px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border-color);
+    }
+
+    .status-indicator {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--text-muted);
+    }
+
+    .status-indicator.active {
+      background: var(--accent-green);
+      box-shadow: 0 0 8px var(--accent-green);
+    }
+
+    .status-indicator.error {
+      background: var(--accent-red);
+      box-shadow: 0 0 8px var(--accent-red);
+    }
+
+    /* Decision Process Tracker */
+    .process-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .process-step {
+      padding: 8px 12px;
+      border-radius: 6px;
+      background: rgba(15, 23, 42, 0.4);
+      border: 1px solid transparent;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.3s ease;
+    }
+
+    .process-step.active {
+      border-color: var(--primary-cyan);
+      background: rgba(6, 182, 212, 0.1);
+      color: var(--text-main);
+      font-weight: 500;
+    }
+
+    .process-step.completed {
+      border-color: var(--accent-green);
+      color: var(--accent-green);
+    }
+
+    /* Frame & Knowledge Viewer */
+    .knowledge-card {
+      background: rgba(15, 23, 42, 0.8);
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      padding: 12px;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 0.8rem;
+    }
+
+    .frame-title {
+      color: var(--accent-purple);
+      font-weight: bold;
+      margin-bottom: 8px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 4px;
+    }
+
+    .slot-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 3px 0;
+    }
+
+    .slot-name {
+      color: var(--primary-cyan);
+    }
+
+    .slot-value {
+      color: var(--text-main);
+    }
+
+    /* Risk Table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.75rem;
+    }
+
+    th, td {
+      padding: 8px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    th {
+      color: var(--primary-cyan);
+    }
+
+    .badge-danger {
+      color: var(--accent-red);
+    }
+
+    .badge-success {
+      color: var(--accent-green);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-title">
+      <h1>Knowledge Representation in Robotics</h1>
+      <p>Case Study: Fetching a Cup vs. Fetching a Plate (Scripts vs. Frames Analysis)</p>
+    </div>
+    <div class="student-meta">
+      <div>Register No: <span>25CS445</span></div>
+      <div>Student: <span>Rupashree M</span></div>
+      <div>Course: <span>25ADC01 - AI & Applications</span></div>
+    </div>
+  </header>
+
+  <div class="main-grid">
+    <!-- Left Panel: Controls & Options -->
+    <div class="panel">
+      <div class="panel-title">🤖 Command & Config</div>
+      
+      <div class="control-group">
+        <label>Select Command</label>
+        <select id="commandSelect">
+          <option value="cup">Fetch a Cup</option>
+          <option value="plate">Fetch a Plate</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label>Knowledge Representation Mode</label>
+        <div class="toggle-container">
+          <button class="toggle-btn active" id="btnModeFrame" onclick="setMode('frame')">Frame-Based</button>
+          <button class="toggle-btn" id="btnModeScript" onclick="setMode('script')">Script-Only</button>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label>Simulation Options</label>
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; color:var(--text-main);">
+          <input type="checkbox" id="chkIncomplete" onchange="toggleIncomplete()"> Simulate Missing Data (Risks)
+        </label>
+      </div>
+
+      <button class="btn-primary" onclick="runSimulation()">Execute Robot Task</button>
+
+      <div class="panel-title" style="margin-top: 10px;">⚠️ Risks of Incomplete Data</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Missing Slot</th>
+            <th>Potential Risk</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Handle Info</td>
+            <td>Incorrect grasp technique</td>
+          </tr>
+          <tr>
+            <td>Fragility</td>
+            <td>Excessive grip pressure / Damage</td>
+          </tr>
+          <tr>
+            <td>Location</td>
+            <td>High search time & battery drain</td>
+          </tr>
+          <tr>
+            <td>Carry Specs</td>
+            <td>Liquid spillage or slippage</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Middle Panel: Robot Simulation Viewport -->
+    <div class="panel">
+      <div class="panel-title">🎮 Robot Environment Viewport</div>
+      
+      <div class="viewport">
+        <div class="environment-zone">
+          <span>User Area</span>
+          <div class="zone-box" style="border-color: var(--accent-purple);">👤</div>
+        </div>
+
+        <div class="environment-zone">
+          <span>Cupboard</span>
+          <div class="zone-box" id="cupboardZone">☕</div>
+        </div>
+
+        <div class="environment-zone">
+          <span>Dish Rack</span>
+          <div class="zone-box" id="dishRackZone">🍽️</div>
+        </div>
+
+        <!-- Robot Representation -->
+        <div class="robot-avatar" id="robot">🤖</div>
+      </div>
+
+      <div class="status-banner">
+        <div class="status-indicator" id="statusDot"></div>
+        <span id="statusText">System Ready. Select options and run simulation.</span>
+      </div>
+
+      <div class="panel-title">⚙️ Execution Pipeline</div>
+      <div class="process-list" id="processList">
+        <div class="process-step" id="step1">1. Interpret User Command <span>-</span></div>
+        <div class="process-step" id="step2">2. Search Knowledge Base <span>-</span></div>
+        <div class="process-step" id="step3">3. Retrieve Frame / Script Details <span>-</span></div>
+        <div class="process-step" id="step4">4. Navigate to Stored Location <span>-</span></div>
+        <div class="process-step" id="step5">5. Apply Grasping Method <span>-</span></div>
+        <div class="process-step" id="step6">6. Carry Object Safely <span>-</span></div>
+        <div class="process-step" id="step7">7. Deliver to User <span>-</span></div>
+      </div>
+    </div>
+
+    <!-- Right Panel: Frame Data Structure Inspector -->
+    <div class="panel">
+      <div class="panel-title">🔍 Knowledge Base Inspector</div>
+
+      <div id="frameDisplay">
+        <!-- Dynamic Frame Data -->
+      </div>
+
+      <div class="panel-title" style="margin-top: 10px;">📊 Representation Comparison</div>
+      <div class="knowledge-card" style="font-family: inherit;">
+        <p style="margin-bottom: 8px;"><strong>Scripts:</strong> Excellent for sequential repetitive steps, but fails to capture object-specific handling details.</p>
+        <p><strong>Frames:</strong> Encapsulates rich object properties (Slots & Values), supporting dynamic reasoning, safety checks, and inheritance.</p>
+      </div>
+
+      <div class="panel-title" style="margin-top: 10px;">🌐 Real-World Applications</div>
+      <div style="font-size:0.8rem; color: var(--text-muted); line-height: 1.4;">
+        Widely utilized in Service Robotics, Smart Warehouses, Healthcare Assistants, and Smart Home Automation systems where nuanced physical interaction is required.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Frame Structures Definition
+    const framesData = {
+      cup: {
+        title: "Cup_Frame",
+        slots: {
+          "Shape": "Cylindrical",
+          "Handle": "Yes",
+          "Fragile": "Yes",
+          "Location": "Cupboard",
+          "Grasp": "Handle",
+          "Carry": "Upright"
+        }
+      },
+      plate: {
+        title: "Plate_Frame",
+        slots: {
+          "Shape": "Flat",
+          "Handle": "No",
+          "Fragile": "Yes",
+          "Location": "Dish Rack",
+          "Grasp": "Bottom / Edge",
+          "Carry": "Horizontal"
+        }
+      }
+    };
+
+    let currentMode = 'frame';
+    let isIncomplete = false;
+
+    function setMode(mode) {
+      currentMode = mode;
+      document.getElementById('btnModeFrame').classList.toggle('active', mode === 'frame');
+      document.getElementById('btnModeScript').classList.toggle('active', mode === 'script');
+      renderFrameInspector();
+    }
+
+    function toggleIncomplete() {
+      isIncomplete = document.getElementById('chkIncomplete').checked;
+      renderFrameInspector();
+    }
+
+    function renderFrameInspector() {
+      const selectedObject = document.getElementById('commandSelect').value;
+      const displayContainer = document.getElementById('frameDisplay');
+
+      if (currentMode === 'script') {
+        displayContainer.innerHTML = `
+          <div class="knowledge-card">
+            <div class="frame-title">Generic Script Sequence</div>
+            <div style="color: var(--text-muted); font-size: 0.75rem;">
+              Receive Command ➔ Identify Object ➔ Move to Kitchen ➔ Locate Object ➔ Pick Object ➔ Return ➔ Deliver
+            </div>
+            <div style="color: var(--accent-red); margin-top: 10px; font-size: 0.75rem;">
+              ⚠️ Warning: No object physical properties attached!
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      const frame = framesData[selectedObject];
+      let html = `<div class="knowledge-card"><div class="frame-title">${frame.title}</div>`;
+
+      for (const [key, val] of Object.entries(frame.slots)) {
+        let displayVal = val;
+        if (isIncomplete && (key === 'Handle' || key === 'Grasp' || key === 'Carry' || key === 'Location')) {
+          displayVal = "<span style='color:var(--accent-red)'>[MISSING/NULL]</span>";
+        }
+        html += `
+          <div class="slot-row">
+            <span class="slot-name">${key}:</span>
+            <span class="slot-value">${displayVal}</span>
+          </div>
+        `;
+      }
+      html += `</div>`;
+      displayContainer.innerHTML = html;
+    }
+
+    document.getElementById('commandSelect').addEventListener('change', renderFrameInspector);
+    renderFrameInspector();
+
+    // Simulation Engine
+    function runSimulation() {
+      const selectedObject = document.getElementById('commandSelect').value;
+      const robot = document.getElementById('robot');
+      const statusText = document.getElementById('statusText');
+      const statusDot = document.getElementById('statusDot');
+
+      // Reset steps
+      for(let i=1; i<=7; i++) {
+        const el = document.getElementById(`step${i}`);
+        el.className = 'process-step';
+        el.querySelector('span').innerText = '-';
+      }
+
+      statusDot.className = 'status-indicator active';
+      statusText.innerText = `Executing command: "Fetch a ${selectedObject}" using ${currentMode.toUpperCase()} mode...`;
+
+      const targetLocation = selectedObject === 'cup' ? 'cupboard' : 'dishRack';
+      
+      // Step timeline animation
+      setTimeout(() => setStepStatus(1, true, "Done"), 400);
+      setTimeout(() => setStepStatus(2, true, "Done"), 800);
+      
+      setTimeout(() => {
+        setStepStatus(3, true, currentMode === 'frame' ? "Frame Retrieved" : "Script Loaded");
+        // Move robot to target location
+        if(targetLocation === 'cupboard') {
+          robot.style.left = '42%';
+        } else {
+          robot.style.left = '72%';
+        }
+      }, 1200);
+
+      setTimeout(() => {
+        if(isIncomplete && currentMode === 'frame') {
+          setStepStatus(4, false, "Location Unknown - Excessive Battery Use");
+        } else {
+          setStepStatus(4, true, selectedObject === 'cup' ? "At Cupboard" : "At Dish Rack");
+        }
+      }, 2000);
+
+      setTimeout(() => {
+        if (currentMode === 'script') {
+          setStepStatus(5, false, "Generic Pinch Used (Risky)");
+        } else if (isIncomplete) {
+          setStepStatus(5, false, "Incorrect Grasp Point! Object Damaged/Dropped");
+        } else {
+          const grasp = framesData[selectedObject].slots.Grasp;
+          setStepStatus(5, true, `Grasped via ${grasp}`);
+        }
+      }, 2800);
+
+      setTimeout(() => {
+        if (isIncomplete && currentMode === 'frame') {
+          setStepStatus(6, false, "Spillage / Slippage Hazard Detected");
+        } else {
+          const carry = framesData[selectedObject].slots.Carry;
+          setStepStatus(6, true, `Carrying ${carry}`);
+        }
+        // Robot returns
+        robot.style.left = '10%';
+      }, 3600);
+
+      setTimeout(() => {
+        if(isIncomplete || currentMode === 'script') {
+          setStepStatus(7, false, "Task Complete with Warnings/Errors");
+          statusDot.className = 'status-indicator error';
+          statusText.innerText = "Task completed, but risks/errors occurred due to non-optimal knowledge representation.";
+        } else {
+          setStepStatus(7, true, "Delivered Safely");
+          statusDot.className = 'status-indicator active';
+          statusText.innerText = "Task completed successfully with high precision and safety using Frames!";
+        }
+      }, 4400);
+    }
+
+    function setStepStatus(stepNum, isSuccess, text) {
+      const step = document.getElementById(`step${stepNum}`);
+      step.className = `process-step ${isSuccess ? 'completed' : 'active'}`;
+      step.querySelector('span').innerText = text;
+    }
+  </script>
+</body>
+</html>
